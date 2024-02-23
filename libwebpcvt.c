@@ -143,9 +143,14 @@ int WebpConvertTo(const char *in_file, const char *out_file, outfmt_t out_fmt, i
         *reason = 6;
         goto FinalizeAndExit;
     }
-    if ((out_handle = fopen(out_file, "wb")) == NULL)
+    if (config.input.has_animation)
     {
         *reason = 7;
+        goto FinalizeAndExit;
+    }
+    if ((out_handle = fopen(out_file, "wb")) == NULL)
+    {
+        *reason = 8;
         goto FinalizeAndExit;
     }
     switch (out_fmt)
@@ -157,7 +162,7 @@ int WebpConvertTo(const char *in_file, const char *out_file, outfmt_t out_fmt, i
         result = WriteBufferToJpgFile(&config, quality, out_handle);
         break;
     }
-    *reason = result ? 0 : 8;
+    *reason = result ? 0 : 9;
 FinalizeAndExit:
     if (NULL != in_handle)
     {
