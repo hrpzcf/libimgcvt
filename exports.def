@@ -1,4 +1,4 @@
-LIBRARY libwebpcvt
+LIBRARY libimgcvt
 EXPORTS
     ImgcCreateConfig
     ImgcDeleteConfig
