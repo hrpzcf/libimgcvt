@@ -2,7 +2,6 @@ LIBRARY libwebpcvt
 EXPORTS
     ImgcCreateConfig
     ImgcDeleteConfig
-    ImgcInitConfig
     ImgcDecodeFile
     ImgcEncodeFile
     ConvertImageFormat
