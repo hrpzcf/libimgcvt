@@ -68,7 +68,8 @@ void ImgcFreeConfig(imgcconfig_t *);
 
 int ImgcGetFileData(const char *, uint8_t **, size_t *);
 int ImgcDecodeFile(const char *, imgcfmt_t, imgcconfig_t *, char *);
-int ImgcEncodeFile(const char *, imgcfmt_t, const imgcconfig_t *, char *);
+int ImgcEncodeFile(const char *, imgcfmt_t, imgcconfig_t *, char *);
+int ImgcAlphaBlending(imgcconfig_t *, uint8_t);
 
 int ConvertImageFormat(const char *, imgcfmt_t, const char *, imgcfmt_t, int,
                        int, int, char *);

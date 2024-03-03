@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
+
 #include "imgdecode.h"
 #include "imgencode.h"
 
@@ -79,6 +81,80 @@ void ImgcFreeConfig(imgcconfig_t *config)
         config->count = 0;
         config->images = NULL;
     }
+}
+
+int ImgcAlphaBlending(imgcconfig_t *config, uint8_t light)
+{
+    size_t pixel_count;
+    double light_part;
+    double fg_r, fg_g, fg_b, fg_a;
+    double mx_r, mx_g, mx_b;
+    uint8_t *origin_rgba, *mixed_rgb;
+    if (NULL != config && config->count > 0 && NULL != config->images)
+    {
+        for (int i = 0; i < config->count; ++i)
+        {
+            imgcimage_t *image = config->images + i;
+            switch (image->clr)
+            {
+            case IMGC_CLR_GSCA:
+            {
+                origin_rgba = image->rgba;
+                pixel_count = image->width * image->height;
+                if (NULL == (mixed_rgb = malloc(pixel_count)))
+                {
+                    continue;
+                }
+                for (size_t j = 0; j < pixel_count; ++j)
+                {
+                    fg_g = origin_rgba[j * 2 + 0];
+                    fg_a = origin_rgba[j * 2 + 1];
+                    light_part = light * (255 - fg_a);
+                    mx_g = fg_g * fg_a + light_part;
+                    mixed_rgb[j] = (uint8_t)round(mx_g / 255);
+                }
+                image->rgba = mixed_rgb;
+                image->clr = IMGC_CLR_GSC;
+                image->stride = image->width * 1;
+                free(origin_rgba);
+                break;
+            }
+            case IMGC_CLR_RGBA:
+            {
+                origin_rgba = image->rgba;
+                pixel_count = image->width * image->height;
+                if (NULL == (mixed_rgb = malloc(pixel_count * 3)))
+                {
+                    continue;
+                }
+                for (size_t j = 0; j < pixel_count; ++j)
+                {
+                    fg_r = origin_rgba[j * 4 + 0];
+                    fg_g = origin_rgba[j * 4 + 1];
+                    fg_b = origin_rgba[j * 4 + 2];
+                    fg_a = origin_rgba[j * 4 + 3];
+                    light_part = light * (255 - fg_a);
+                    mx_r = fg_r * fg_a + light_part;
+                    mx_g = fg_g * fg_a + light_part;
+                    mx_b = fg_b * fg_a + light_part;
+                    mixed_rgb[j * 3 + 0] = (uint8_t)round(mx_r / 255);
+                    mixed_rgb[j * 3 + 1] = (uint8_t)round(mx_g / 255);
+                    mixed_rgb[j * 3 + 2] = (uint8_t)round(mx_b / 255);
+                }
+                image->rgba = mixed_rgb;
+                image->clr = IMGC_CLR_RGB;
+                image->stride = image->width * 3;
+                free(origin_rgba);
+                break;
+            }
+            default:
+                continue;
+            }
+        }
+        return 1;
+    }
+FinalizeAndExit:
+    return 0;
 }
 
 int ImgcGetFileData(const char *in_file, uint8_t **out_data, size_t *data_size)
@@ -175,7 +251,7 @@ FinalizeAndExit:
     return result;
 }
 
-int ImgcEncodeFile(const char *out_file, imgcfmt_t out_fmt, const imgcconfig_t *config, char *error)
+int ImgcEncodeFile(const char *out_file, imgcfmt_t out_fmt, imgcconfig_t *config, char *error)
 {
     int result = 0;
     FILE *file_pointer = NULL;

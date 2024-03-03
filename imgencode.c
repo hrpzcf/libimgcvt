@@ -7,7 +7,7 @@
 
 extern void jerror_handler(j_common_ptr cinfo);
 
-int EncodeJpg(const imgcconfig_t *config, FILE *file_pointer, char *error)
+int EncodeJpg(imgcconfig_t *config, FILE *file_pointer, char *error)
 {
     int result = 0;
     if (config->count < 1)
@@ -17,7 +17,7 @@ int EncodeJpg(const imgcconfig_t *config, FILE *file_pointer, char *error)
     }
     else if (config->count > 1)
     {
-        sprintf(error, "[JPEG 编码]  不支持编码动态 JPEG 图像");
+        sprintf(error, "[JPEG 编码]  JPEG 不支持动态图像");
         return result;
     }
     struct jpeg_compress_struct jinfo;
@@ -29,22 +29,35 @@ int EncodeJpg(const imgcconfig_t *config, FILE *file_pointer, char *error)
     jinfo.image_height = config->images->height;
     switch (config->images->clr)
     {
+    case IMGC_CLR_GSC:
+        jinfo.in_color_space = JCS_GRAYSCALE;
+        break;
+    case IMGC_CLR_GSCA:
+        if (!ImgcAlphaBlending(config, 0xFF))
+        {
+            sprintf(error, "[JPEG 编码] 无法对数据进行透明混合");
+            return result;
+        }
+        jinfo.in_color_space = JCS_GRAYSCALE;
+        break;
     case IMGC_CLR_RGB:
-        jinfo.input_components = 3;
         jinfo.in_color_space = JCS_RGB;
         break;
     case IMGC_CLR_RGBA:
-        jinfo.input_components = 4;
-        jinfo.in_color_space = JCS_EXT_RGBA;
-        break;
-    case IMGC_CLR_GSC:
-        jinfo.input_components = 1;
-        jinfo.in_color_space = JCS_GRAYSCALE;
+        if (!ImgcAlphaBlending(config, 0xFF))
+        {
+            sprintf(error, "[JPEG 编码] 无法对数据进行透明混合");
+            return result;
+        }
+        jinfo.in_color_space = JCS_RGB;
         break;
     default:
-        sprintf(error, "[JPEG - 编码] 不支持的颜色空间");
+        sprintf(error, "[JPEG 编码] 不支持的颜色空间");
         return result;
     }
+    jinfo.num_components = config->images->stride /
+                           config->images->width;
+    jinfo.input_components = jinfo.num_components;
     jpeg_stdio_dest(&jinfo, file_pointer);
     jpeg_set_defaults(&jinfo);
     jpeg_set_quality(&jinfo, config->quality, TRUE);
@@ -54,7 +67,7 @@ int EncodeJpg(const imgcconfig_t *config, FILE *file_pointer, char *error)
     {
         if (jpeg_write_scanlines(&jinfo, &row_pointer, 1) != 1)
         {
-            sprintf(error, "[JPEG - 编码] 向 JPEG 文件写入数据失败");
+            sprintf(error, "[JPEG 编码] 将数据编码为 JPEG 图像时出错");
             goto FinalizeAndExit;
         }
         row_pointer += config->images->stride;
@@ -66,7 +79,7 @@ FinalizeAndExit:
     return result;
 }
 
-int EncodePng(const imgcconfig_t *config, FILE *file_pointer, char *error)
+int EncodePng(imgcconfig_t *config, FILE *file_pointer, char *error)
 {
     int result = 0;
     png_infop info_pointer = NULL;
@@ -144,7 +157,7 @@ static int FileWriter(const uint8_t *data, size_t data_size,
     return data_size ? (fwrite(data, data_size, 1, pic->custom_ptr) == 1) : 1;
 }
 
-int EncodeWebp(const imgcconfig_t *config, FILE *file_pointer, char *error)
+int EncodeWebp(imgcconfig_t *config, FILE *file_pointer, char *error)
 {
     int result = 0;
     WebPConfig wp_config;
@@ -232,18 +245,18 @@ int EncodeWebp(const imgcconfig_t *config, FILE *file_pointer, char *error)
     }
     if (!result)
     {
-        sprintf(error, "[WEBP 编码] 导入 RGB/RGBA 数据失败");
+        sprintf(error, "[WEBP 编码] 导入已解码的图像数据失败");
         goto FinalizeAndExit;
     }
     if (!(result = WebPEncode(&wp_config, &wp_picture)))
     {
-        sprintf(error, "[WEBP 编码] 编码过程出现错误");
+        sprintf(error, "[WEBP 编码] 对数据的编码过程出现错误");
     }
 FinalizeAndExit:
     return result;
 }
 
-int EncodeGif(const imgcconfig_t *config, FILE *file_pointer, char *error)
+int EncodeGif(imgcconfig_t *config, FILE *file_pointer, char *error)
 {
     int result = 0;
     sprintf(error, "[GIF 编码] 暂未实现功能");
