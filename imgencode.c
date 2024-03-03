@@ -233,6 +233,22 @@ int EncodeWebp(imgcconfig_t *config, FILE *file_pointer, char *error)
     wp_picture.height = config->images->height;
     switch (config->images->clr)
     {
+    case IMGC_CLR_GSC:
+        if (!ImgcExpandGrayScale(config))
+        {
+            sprintf(error, "[WEBP 编码] 扩展灰度图像数据失败");
+            goto FinalizeAndExit;
+        }
+        result = WebPPictureImportRGB(&wp_picture, config->images->rgba, config->images->stride);
+        break;
+    case IMGC_CLR_GSCA:
+        if (!ImgcExpandGrayScale(config))
+        {
+            sprintf(error, "[WEBP 编码] 扩展灰度图像数据失败");
+            goto FinalizeAndExit;
+        }
+        result = WebPPictureImportRGBA(&wp_picture, config->images->rgba, config->images->stride);
+        break;
     case IMGC_CLR_RGB:
         result = WebPPictureImportRGB(&wp_picture, config->images->rgba, config->images->stride);
         break;
